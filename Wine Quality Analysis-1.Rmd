@@ -1,0 +1,164 @@
+---
+title: 
+output:
+  word_document: default
+  html_document: default
+---
+<center> <h1> </h1> </center>
+<center>  <h3>  </h2> </center>
+<center> <h3>  </h2> </center>
+---
+
+
+```{r}
+
+#Read the dataset and check the datatypes of the attributes
+wine_data1 <- read.csv("winequality-white.csv", header = TRUE, sep = ";")
+wine_data2 <- read.csv("winequality-red.csv", header = TRUE, sep = ";")
+sapply(wine_data1,class)
+sapply(wine_data2, class)
+```
+
+
+```{r}
+
+# Check for missing values
+sum(is.na(wine_data1))
+sum(is.na(wine_data2))
+```
+There are no missing values.
+
+
+
+```{r}
+
+#Find the correlation between attributes other than quality
+#install.packages("corrplot")
+library(corrplot)
+correlation1 = cor(wine_data1[-12])
+correlation1
+corrplot(correlation1)
+correlation2 = cor(wine_data2[-12])
+correlation2
+corrplot(correlation2)
+```
+
+```{r}
+#Plot the histogram for wine quality
+hist(wine_data1$quality, xlab= "Quality", main = "Histogram of White Wine Quality")
+hist(wine_data2$quality, xlab= "Quality", main = "Histogram of Red Wine Quality")
+```
+
+```{r}
+
+#Assign Fail to wine quality <= 5 and Pass for wine quality > 5
+wine_data1$quality <- ifelse(wine_data1$quality <= 5, "Fail", "Pass")
+wine_data1$quality <- ordered(wine_data1$quality, c('Fail', 'Pass'))
+
+wine_data2$quality <- ifelse(wine_data2$quality <= 5, "Fail", "Pass")
+wine_data2$quality <- ordered(wine_data2$quality, c('Fail', 'Pass'))
+
+
+```
+
+```{r}
+
+#Normalize the dataset
+norm = function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+  }
+wine_data3 = as.data.frame(sapply(wine_data1[-12],norm))
+wine_data4 = as.data.frame(sapply(wine_data2[-12],norm))
+```
+
+```{r}
+
+#Add the quality column back into the normalized dataset and then remove it for training and testing
+wine_data3$quality <- wine_data1$quality
+train_ind1 = sample(nrow(wine_data1), 0.7 * nrow(wine_data1))
+train.set1 = wine_data3[train_ind1,]
+test.set1 = wine_data3[-train_ind1,]
+train.set_new1 = train.set1[-12]
+test.set_new1 = test.set1[-12]
+
+wine_data4$quality <- wine_data2$quality
+train_ind2 = sample(nrow(wine_data2), 0.7 * nrow(wine_data2))
+train.set2 = wine_data4[train_ind2,]
+test.set2 = wine_data4[-train_ind2,]
+train.set_new2 = train.set2[-12]
+test.set_new2 = test.set2[-12]
+```
+
+```{r}
+# Predict the quality of wine. Used head() to get the first five outcomes in the dataset
+glm_model1 <- glm(quality~.,train.set1, family = "binomial")
+head(predict(glm_model1,type = "response"))
+predicted1 <- predict(glm_model1, test.set1, type = "response")
+```
+
+
+```{r}
+glm_model2 <- glm(quality~.,train.set2, family = "binomial")
+head(predict(glm_model2,type = "response"))
+predicted2 <- predict(glm_model2, test.set2, type = "response")
+```
+```{r}
+#Create the confusion Matrix
+predicted1 <- predict(glm_model1, test.set1, type = "response")
+predicted_class1 <- ifelse(predicted1>=0.5, 1, 0)
+ConfusionMatrix <- table(actual = test.set1$quality, predicted = predicted_class1)
+ConfusionMatrix
+```
+
+
+```{r}
+predicted2 <- predict(glm_model2, test.set2, type = "response")
+predicted_class2 <- ifelse(predicted2>=0.5, 1, 0)
+ConfusionMatrix2 <- table(actual = test.set2$quality, predicted = predicted_class2)
+ConfusionMatrix2
+```
+
+```{r}
+
+# Get the TN, FP, FN, and TP values
+# calculate specificity, sensitivity, and accuracy using the TN, FP, FN, and TP
+# values
+TN1 = ConfusionMatrix[1,1]
+
+FP1 = ConfusionMatrix[1,2]
+
+FN1 = ConfusionMatrix[2,1]
+
+TP1 = ConfusionMatrix[2,2]
+
+sensitivity1 = TP1/(TP1+FN1)
+cat("Sensitivity:",sensitivity1)
+
+specificity1 = TN1/(TN1+FP1)
+cat(' Specificity:',specificity1)
+
+accuracy1 = (TP1+TN1)/(TP1+FN1+FP1+TN1)
+cat(' Accuracy:',accuracy1)
+
+```
+
+```{r}
+TN2 = ConfusionMatrix2[1,1]
+
+FP2 = ConfusionMatrix2[1,2]
+
+FN2 = ConfusionMatrix2[2,1]
+
+TP2 = ConfusionMatrix2[2,2]
+
+sensitivity2 = TP2/(TP2+FN2)
+cat("Sensitivity:",sensitivity2)
+
+specificity2 = TN2/(TN2+FP2)
+cat(' Specificity:',specificity2)
+
+accuracy2 = (TP2+TN2)/(TP2+FN2+FP2+TN2)
+cat(' Accuracy:',accuracy2)
+
+```
+
